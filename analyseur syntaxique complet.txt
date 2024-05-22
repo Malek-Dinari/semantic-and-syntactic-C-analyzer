@@ -1,0 +1,500 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+
+#define MAX_TOKEN_LENGTH 100
+
+
+// Fonction pour signaler une erreur
+void erreur(const char *message) {
+    fprintf(stderr, "Erreur : %s\n", message);
+    exit(EXIT_FAILURE);
+}
+
+// Structure pour stocker le code intermédiaire
+typedef struct {
+    char **codeArray;
+    size_t size;
+    size_t capacity;
+} CodeIntermediate;
+
+// Initialiser la structure CodeIntermediate
+CodeIntermediate* initCodeIntermediate() {
+    CodeIntermediate *codeInter = (CodeIntermediate*)malloc(sizeof(CodeIntermediate));
+    codeInter->codeArray = NULL;
+    codeInter->size = 0;
+    codeInter->capacity = 0;
+    return codeInter;
+}
+
+// Ajouter une instruction au code intermédiaire
+void addCodeInstruction(CodeIntermediate *codeInter, const char *instruction) {
+    if (codeInter->size == codeInter->capacity) {
+        // Si la capacité est insuffisante, augmentez-la
+        codeInter->capacity = (codeInter->capacity == 0) ? 1 : codeInter->capacity * 2;
+        codeInter->codeArray = (char**)realloc(codeInter->codeArray, codeInter->capacity * sizeof(char*));
+    }
+
+    // Allouer de la mémoire pour l'instruction
+    codeInter->codeArray[codeInter->size] = (char*)malloc((strlen(instruction) + 1) * sizeof(char));
+    
+    // Copier l'instruction dans le tableau
+    strcpy(codeInter->codeArray[codeInter->size], instruction);
+    
+    // Augmenter la taille
+    codeInter->size++;
+}
+
+// Afficher le code intermédiaire
+void printCodeIntermediate(CodeIntermediate *codeInter) {
+    printf("Code intermédiaire :\n");
+    for (size_t i = 0; i < codeInter->size; ++i) {
+        printf("%s\n", codeInter->codeArray[i]);
+    }
+}
+
+// Libérer la mémoire utilisée par le code intermédiaire
+void freeCodeIntermediate(CodeIntermediate *codeInter) {
+    for (size_t i = 0; i < codeInter->size; ++i) {
+        free(codeInter->codeArray[i]);
+    }
+    free(codeInter->codeArray);
+    free(codeInter);
+}
+
+// Fonctions auxiliaires pour la génération de code intermédiaire
+
+
+// Fonction de génération de code intermédiaire
+void generateCode(const char *instruction) {
+    // Utiliser une variable globale pour stocker le code intermédiaire généré
+    static CodeIntermediate *codeInter = NULL;
+    
+    // Si codeInter n'est pas initialisé, initialisez-le
+    if (!codeInter) {
+        codeInter = initCodeIntermediate();
+    }
+
+    // Ajouter l'instruction au code intermédiaire
+    addCodeInstruction(codeInter, instruction);
+    
+    // Afficher l'instruction générée (à des fins de débogage)
+    printf("Generated Code: %s\n", instruction);    
+	
+}
+
+
+
+
+// Fonction pour avancer à la prochaine unité lexicale
+void avancer() {
+    // Simule la récupération des unités lexicales
+}
+
+// Fonctions correspondant aux non-terminaux de la grammaire
+
+void P();
+void Dcl();
+void Dcl_prime();
+void Liste_id();
+void Liste_id_prime();
+void Type();
+void Inst_composee();
+void Liste_inst();
+void Liste_inst_prime();
+void I();
+void Exp();
+void Exp_prime();
+void Exp_simple();
+void Exp_simple_prime();
+void Terme();
+void Terme_prime();
+void Facteur();
+
+// Fonctions auxiliaires pour les unités lexicales
+void match(int token);
+void matchId();
+
+// Simulation de l'analyse lexicale (non implémentée ici)
+int getNextToken();
+
+int main() {
+    
+    printf("Entrez votre code source :\n");
+    // Simulation de l'analyse syntaxique
+    P();
+
+    // Afficher le code intermédiaire généré
+    printCodeIntermediate();
+
+    // Libérer la mémoire utilisée par le code intermédiaire
+    freeCodeIntermediate();
+
+    printf("Analyse syntaxique et génération de code intermédiaire réussies.\n");
+    return 0;
+}
+
+
+char lastId[MAX_TOKEN_LENGTH];  // Pour stocker le dernier identifiant
+int lastNum;  // Pour stocker la dernière constante numérique
+int lastToken;  // Pour stocker le dernier token analysé
+
+
+
+// Implémentation des fonctions correspondant aux non-terminaux de la grammaire
+
+// Déclarations sémantiques
+int tempCount = 0;  // Compteur pour les temporaires
+
+
+
+void P() {
+    match(PROGRAM);
+    match(ID);
+    // Actions sémantiques pour le non-terminal P ici
+    Dcl();
+    Inst_composee();
+    match(DOT);
+}
+
+void Dcl() {
+    if (getNextToken() == VAR) {
+        match(VAR);
+        Liste_id();
+        match(COLON);
+        Type();
+        Dcl_prime();
+      
+	generateCode("DECLARE_VARIABLES");
+    } else {
+        // Production ε
+        // Actions sémantiques pour le non-terminal Dcl ici (s'il y en a)
+	generateCode("NO_VARIABLES_DECLARED");
+    }
+}
+
+void Dcl_prime() {
+    if (getNextToken() == SEMICOLON) {
+        match(SEMICOLON);
+        Liste_id();
+        match(COLON);
+        Type();
+        Dcl_prime();
+        // Actions sémantiques pour le non-terminal Dcl_prime ici
+    } else {
+        // Production ε
+        // Actions sémantiques pour le non-terminal Dcl_prime ici (s'il y en a)
+	generateCode("NO_MORE_VARIABLES_DECLARATIONS");
+    }
+}
+
+void Liste_id() {
+    matchId();
+    Liste_id_prime();
+    // Actions sémantiques pour le non-terminal Liste_id ici
+    generateCode("PUSH_VARIABLE " + getCurrentTokenValue());
+}
+
+void Liste_id_prime() {
+    if (getNextToken() == COMMA) {
+        match(COMMA);
+        matchId();
+        Liste_id_prime();
+        // Actions sémantiques pour le non-terminal Liste_id_prime ici
+	generateCode("PUSH_VARIABLE " + getCurrentTokenValue());
+    } else {
+        // Production ε
+        // Actions sémantiques pour le non-terminal Liste_id_prime ici (s'il y en a)
+	generateCode("NO_MORE_VARIABLES_IN_LIST");
+    }
+}
+
+void Type() {
+    if (getNextToken() == INTEGER || getNextToken() == CHAR) {
+        avancer();
+        // Actions sémantiques pour le non-terminal Type ici
+    } else {
+        erreur("Type attendu (integer/char).");
+    }
+}
+
+void Inst_composee() {
+    match(BEGIN);
+    Liste_inst();
+    match(END);
+}
+
+void Liste_inst() {
+    I();
+    Liste_inst_prime();
+}
+
+void Liste_inst_prime() {
+    if (getNextToken() == SEMICOLON) {
+        match(SEMICOLON);
+        I();
+        Liste_inst_prime();
+    } else {
+        // Production ε
+    }
+}
+
+void I() {
+    switch (getNextToken()) {
+        case ID:
+            matchId();
+            match(ASSIGN);
+            Exp_simple();
+            generateCode("ASSIGN");
+            printf("STORE %s\n", lastId);  // Supposons lastId contient le dernier identifiant rencontré
+            break;
+        case IF:
+            match(IF);
+            Exp();
+            match(THEN);
+            generateCode("IF_ELSE");
+            printf("JUMP_IF_FALSE L%d\n", tempCount);
+            tempCount++;
+            I();
+            printf("L%d: NOOP\n", tempCount - 1);
+            match(ELSE);
+            I();
+            break;
+        case WHILE:
+            // Génération d'instructions pour la structure WHILE
+            printf("L%d: NOOP\n", tempCount);
+            tempCount++;
+            match(WHILE);
+            Exp();
+            match(DO);
+            I();
+            printf("JUMP L%d\n", tempCount - 1);
+            printf("L%d: NOOP\n", tempCount);
+	    generateCode("WHILE_LOOP");
+            break;
+        case READ:
+        case READLN:
+        case WRITE:
+        case WRITELN:
+            avancer();
+            matchId();
+            // Génération d'instructions pour les entrées/sorties
+            if (getLastToken() == READ) {
+                printf("READ %s\n", lastId);  // Supposons lastId contient le dernier identifiant rencontré
+            } else if (getLastToken() == READLN) {
+                printf("READLN %s\n", lastId);
+            } else if (getLastToken() == WRITE) {
+                printf("WRITE %s\n", lastId);
+            } else if (getLastToken() == WRITELN) {
+                printf("WRITELN %s\n", lastId);
+            }
+	    generateCode("IO_OPERATION");
+            break;
+        default:
+            erreur("Instruction non reconnue.");
+	    generateCode("NO_INSTRUCTION");
+	    break;
+    }
+}
+
+void Exp() {
+    Exp_simple();
+    Exp_prime();
+}
+
+void Exp_prime() {
+    if (getNextToken() == OP_REL) {
+        char* op = getOpRel();
+        avancer();
+        Exp_simple();
+        // Génération d'instructions pour l'opération relationnelle
+        printf("COMPARE %s\n", op);
+        free(op);
+        Exp_prime();
+	generateCode("RELATIONAL_OPERATION");
+    } else {
+        // Production ε
+	// Actions sémantiques pour le non-terminal Exp_prime ici
+        // Génération de code intermédiaire pour les opérations relationnelles
+        generateCode("RELATIONAL_OPERATION");
+    }
+}
+
+void Exp_simple() {
+    Terme();
+    Exp_simple_prime();
+}
+
+void Exp_simple_prime() {
+    if (getNextToken() == OP_ADD) {
+        char* op = getOpAdd();
+        avancer();
+        Terme();
+        // Génération d'instructions pour l'opération d'addition
+        printf("ADD %s\n", op);
+        free(op);
+        Exp_simple_prime();
+	generateCode("ADD_OPERATION");
+    } else {
+        // Production ε
+	// Actions sémantiques pour le non-terminal Exp_simple_prime ici (s'il y en a)
+        // Par exemple, génération de code intermédiaire pour ε dans ce contexte
+        generateCode("NO_ADD_OPERATION");
+    }
+}
+
+void Terme() {
+    Facteur();
+    Terme_prime();
+}
+
+void Terme_prime() {
+    if (getNextToken() == OP_MUL) {
+        char* op = getOpMul();
+        avancer();
+        Facteur();
+        // Génération d'instructions pour l'opération de multiplication
+        printf("MULT %s\n", op);
+        free(op);
+        Terme_prime();
+	generateCode("MULTIPLY_OPERATION");
+    } else {
+        // Production ε
+	// Actions sémantiques pour le non-terminal Terme_prime ici (s'il y en a)
+        // Par exemple, génération de code intermédiaire pour ε dans ce contexte
+        generateCode("NO_MULTIPLY_OPERATION");
+    }
+}
+
+void Facteur() {
+    switch (getNextToken()) {
+        case ID:
+            matchId();
+            // Génération d'instructions pour un identifiant
+            printf("LOAD %s\n", lastId);  // Supposons lastId contient le dernier identifiant rencontré
+            break;
+        case NUMBER:
+            avancer();
+            // Génération d'instructions pour une constante numérique
+            printf("PUSH %d\n", lastNum);  // Supposons lastNum contient la dernière constante numérique rencontrée
+            break;
+        case LEFT_PAREN:
+            match(LEFT_PAREN);
+            Exp_simple();
+            match(RIGHT_PAREN);
+            break;
+        default:
+            erreur("Facteur non reconnu.");
+    }
+}
+
+
+// Fonction pour vérifier la correspondance d'un identificateur
+void matchId() {
+    if (getNextToken() == ID) {
+        avancer();
+    } else {
+        erreur("Identificateur attendu.");
+    }
+}
+
+// Fonction pour vérifier la correspondance d'un token
+void match(int tokenAttendu) {
+    if (getNextToken() == tokenAttendu) {
+        avancer();
+    } else {
+        erreur("Token inattendu.");
+    }
+}
+
+
+/// Fonction pour simuler l'analyse lexicale (à remplacer par une implémentation réelle)
+int getNextToken() {
+    char token[MAX_TOKEN_LENGTH];
+    int c = getchar();
+
+    // Ignorer les espaces et les retours à la ligne
+    while (isspace(c)) {
+        c = getchar();
+    }
+
+    if (isalpha(c)) {
+        // Identifier des mots réservés ou des identificateurs
+        int i = 0;
+        while (isalnum(c) || c == '_') {
+            token[i++] = c;
+            c = getchar();
+        }
+        token[i] = '\0';
+
+        if (strcmp(token, "program") == 0) return PROGRAM;
+        if (strcmp(token, "var") == 0) return VAR;
+        if (strcmp(token, "integer") == 0) return INTEGER;
+        if (strcmp(token, "char") == 0) return CHAR;
+        if (strcmp(token, "begin") == 0) return BEGIN;
+        if (strcmp(token, "end") == 0) return END;
+        if (strcmp(token, "if") == 0) return IF;
+        if (strcmp(token, "then") == 0) return THEN;
+        if (strcmp(token, "else") == 0) return ELSE;
+        if (strcmp(token, "while") == 0) return WHILE;
+        if (strcmp(token, "do") == 0) return DO;
+        if (strcmp(token, "read") == 0) return READ;
+        if (strcmp(token, "readln") == 0) return READLN;
+        if (strcmp(token, "write") == 0) return WRITE;
+        if (strcmp(token, "writeln") == 0) return WRITELN;
+        
+        strcpy(lastId, token);
+        return ID;
+    } else if (isdigit(c)) {
+        // Identifier les constantes numériques
+        int i = 0;
+        while (isdigit(c)) {
+            token[i++] = c;
+            c = getchar();
+        }
+        token[i] = '\0';
+        lastNum = atoi(token);
+        return NUMBER;
+    } else if (c == ':') {
+        // Peut être une affectation :=
+        c = getchar();
+        if (c == '=') {
+            return ASSIGN;
+        } else {
+            ungetc(c, stdin);  // Remettre le caractère non consommé
+            return COLON;
+        }
+    } else if (c == ';') {
+        return SEMICOLON;
+    } else if (c == ',') {
+        return COMMA;
+    } else if (c == '.') {
+        return DOT;
+    } else if (c == '+') {
+        return OP_ADD;
+    } else if (c == '-') {
+        return OP_ADD;  // On traite le signe moins comme une opération d'addition
+    } else if (c == '*') {
+        return OP_MUL;
+    } else if (c == '(') {
+        return LEFT_PAREN;
+    } else if (c == ')') {
+        return RIGHT_PAREN;
+    } else if (c == '=') {
+        return OP_REL;
+    } else if (c == '<' || c == '>') {
+        // Possiblement un opérateur relationnel
+        int nextChar = getchar();
+        if (nextChar == '=') {
+            return OP_REL;
+        } else {
+            ungetc(nextChar, stdin);
+            return OP_REL;
+        }
+    } else {
+        // Caractère non reconnu
+        return -1;
+    }
+}
+
